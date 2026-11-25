@@ -1,3 +1,45 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Appointment
+
+@admin.register(Appointment)
+class AppointmentAdminPerso(admin.ModelAdmin):
+    list_display = (
+        'id', 'reason', 'status',
+        'duration_minutes', 'appointment_date',
+        'doctor', 'patient',
+    )
+    list_filter = ('status', 'appointment_date')
+    list_editable = ('status',)
+    search_fields = ('duration_minutes',
+                 'doctor__username',)
+    list_per_page = 2
+    ordering = ('appointment_date',)
+# décroissant : ('-appointment_date',)
+    fieldsets = (
+    ('Appointment Information', {
+        'fields': ('reason', 'status')
+    }),
+    ('Appointment Details', {
+        'fields': ('duration_minutes',
+                   'appointment_date', 'doctor', 'patient')
+    }),
+    ('Non Editable', {
+        'fields': ('created_at', 'updated_at')
+    }),
+)
+readonly_fields = ('created_at', 'updated_at')
+# Fonctions avant la classe ModelAdmin
+@admin.action(description='Confirmer les RDV',
+              permissions=['change'])
+def mark_as_confirmed(modeladmin, request, queryset):
+    queryset.update(status='CONFIRMED')
+
+@admin.action(description='Annuler les RDV',
+              permissions=['change'])
+def mark_as_cancelled(modeladmin, request, queryset):
+    queryset.update(status='CANCELLED')
+
+# Dans AppointmentAdminPerso
+# Ajouter aux autres options :
+actions = [mark_as_confirmed, mark_as_cancelled]

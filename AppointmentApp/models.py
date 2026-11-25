@@ -1,4 +1,7 @@
 ﻿from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from AccountApp.models import Doctor, Patient
 
 
 class Appointment(models.Model):
@@ -25,3 +28,26 @@ class Appointment(models.Model):
     )
 
     prescription = models.FileField(upload_to="prescriptions/", blank=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doctor', 'appointment_date'],
+                name='unique_doctor_appointment'
+            )
+        ]
+        ordering = ['appointment_date']
+
+    def clean(self):
+        super().clean()
+        modified_date = self._state.adding or (
+            not Appointment.objects.filter(
+                pk=self.pk,
+                appointment_date=self.appointment_date,
+            ).exists()
+        )
+        if self.appointment_date and modified_date and (
+            self.appointment_date <= timezone.now()
+        ):
+            raise ValidationError(
+                "Appointment date cannot be in the past."
+            )
